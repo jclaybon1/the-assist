@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="The Assist: an AI study coach for high school athletes. Built by Joshua-James Claybon.">
+<title>The Assist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: "stadium at night, jazz club after." Dark stage bands (hero, eligibility, signup) alternate with quiet themed sections; wide expanded type, brass as the lead accent, pitch green for progress. */
+:root {
+  --bg: #F3F4EF;
+  --surface: #FFFFFF;
+  --ink: #101A15;
+  --muted: #5A685F;
+  --line: #DEE3DA;
+  --brass: #9C6614;
+  --brass-soft: #F4E7CF;
+  --pitch: #16804B;
+  --pitch-soft: #DFEFE5;
+  /* stage: always-dark bands, same in both themes */
+  --stage: #0A1611;
+  --stage-2: #12231B;
+  --stage-line: #24382E;
+  --stage-ink: #EEF2EA;
+  --stage-muted: #9DAEA3;
+  --stage-brass: #E6B556;
+  --stage-pitch: #4CC489;
+  --font-display: "Archivo", "Arial Black", Impact, sans-serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --radius: 22px;
+  --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 30px 80px -40px rgba(0,0,0,.6);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D1813; --surface: #13211A; --ink: #E9EEE6; --muted: #98A99E; --line: #23352B;
+    --brass: #E6B556; --brass-soft: #2E2410; --pitch: #4CC489; --pitch-soft: #14301F;
+    --stage: #07100C; --stage-2: #101E17;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D1813; --surface: #13211A; --ink: #E9EEE6; --muted: #98A99E; --line: #23352B;
+  --brass: #E6B556; --brass-soft: #2E2410; --pitch: #4CC489; --pitch-soft: #14301F;
+  --stage: #07100C; --stage-2: #101E17;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 17px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1160px; margin: 0 auto; padding-inline: 20px; }
+h1, h2, h3, h4 { margin: 0; text-wrap: balance; }
+h1, h2, h3 { font-family: var(--font-display); font-stretch: 125%; letter-spacing: -.01em; line-height: .98; }
+h2 { font-size: clamp(2.1rem, 4.6vw, 3.4rem); font-weight: 800; }
+h3 { font-size: 1.25rem; font-weight: 800; letter-spacing: 0; line-height: 1.15; }
+p { margin: 0; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; border-radius: 6px; }
+.eyebrow { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .16em; text-transform: uppercase; color: var(--brass); display: inline-flex; align-items: center; gap: 10px; }
+.eyebrow::before { content: ""; width: 22px; height: 1px; background: currentColor; }
+.lede { color: var(--muted); max-width: 58ch; font-size: 1.08rem; }
+section { padding-block: 112px; }
+.section-head { display: grid; gap: 16px; margin-bottom: 56px; max-width: 760px; }
+
+/* buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; font: 700 .98rem var(--font-body); padding: 14px 24px; border-radius: 999px; border: 0; background: var(--stage-brass); color: #1A1306; text-decoration: none; cursor: pointer; transition: transform .2s ease, box-shadow .2s ease; box-shadow: 0 10px 30px -12px rgba(230,181,86,.7); }
+.btn:hover { transform: translateY(-2px); box-shadow: 0 16px 40px -14px rgba(230,181,86,.85); }
+.btn .arrow { transition: transform .2s ease; }
+.btn:hover .arrow { transform: translateX(3px); }
+.btn.ghost { background: transparent; color: var(--stage-ink); box-shadow: inset 0 0 0 1px var(--stage-line); }
+.btn.ghost:hover { box-shadow: inset 0 0 0 1px var(--stage-muted); }
+.btn.quiet { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+
+/* nav */
+.nav { position: fixed; top: env(safe-area-inset-top, 0px); left: 0; right: 0; z-index: 20; padding-top: 14px; }
+.nav-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 10px 10px 20px; border-radius: 999px; background: rgba(10,22,17,.72); backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%); border: 1px solid rgba(255,255,255,.08); color: var(--stage-ink); }
+.logo { font-family: var(--font-display); font-stretch: 125%; font-weight: 900; font-size: 1.05rem; letter-spacing: .02em; text-transform: uppercase; text-decoration: none; display: flex; align-items: center; gap: 10px; }
+.logo svg { width: 24px; height: 24px; }
+.nav-links { display: flex; gap: 6px; align-items: center; font-weight: 600; font-size: .9rem; }
+.nav-links a:not(.btn) { text-decoration: none; color: var(--stage-muted); padding: 8px 12px; border-radius: 999px; transition: color .2s, background .2s; }
+.nav-links a:not(.btn):hover { color: var(--stage-ink); background: rgba(255,255,255,.06); }
+.nav .btn { padding: 10px 18px; font-size: .88rem; }
+
+/* stage bands */
+.stage { background: var(--stage); color: var(--stage-ink); }
+.stage .lede { color: var(--stage-muted); }
+.stage .eyebrow { color: var(--stage-brass); }
+
+/* hero */
+.hero { position: relative; overflow: hidden; padding-block: 150px 110px; isolation: isolate; }
+.hero::before { content: ""; position: absolute; inset: -20% -10% auto auto; width: 70vw; height: 70vw; max-width: 900px; max-height: 900px; background: radial-gradient(closest-side, rgba(76,196,137,.20), transparent 70%); z-index: -1; }
+.hero::after { content: ""; position: absolute; inset: auto auto -30% -15%; width: 60vw; height: 60vw; max-width: 760px; max-height: 760px; background: radial-gradient(closest-side, rgba(230,181,86,.16), transparent 70%); z-index: -1; }
+.pitch-lines { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; color: var(--stage-ink); opacity: .07; }
+.pitch-lines * { stroke-dasharray: 1; stroke-dashoffset: 0; animation: draw 2.4s cubic-bezier(.6,0,.2,1) both; }
+@keyframes draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.hero-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 64px; align-items: center; }
+.hero-copy { display: grid; gap: 28px; min-width: 0; }
+.hero h1 { font-size: clamp(3.2rem, 8.4vw, 6.6rem); font-weight: 900; text-transform: uppercase; line-height: .9; }
+.hero h1 .accent { background: linear-gradient(100deg, var(--stage-brass), #F3D08A 60%, var(--stage-brass)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero-cta { display: flex; flex-wrap: wrap; gap: 12px; }
+
+/* session card */
+.card-stack { position: relative; min-width: 0; animation: rise .9s .2s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes rise { from { transform: translateY(24px); opacity: .001; } to { transform: none; opacity: 1; } }
+.session { position: relative; background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.02)); border: 1px solid rgba(255,255,255,.10); border-radius: 26px; padding: 24px; box-shadow: var(--shadow); backdrop-filter: blur(8px); display: grid; gap: 18px; }
+.session-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-family: var(--font-mono); font-size: .7rem; color: var(--stage-muted); text-transform: uppercase; letter-spacing: .1em; }
+.live { color: var(--stage-pitch); display: inline-flex; align-items: center; gap: 8px; }
+.live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 0 rgba(76,196,137,.6); animation: pulse 2s infinite; }
+@keyframes pulse { 70% { box-shadow: 0 0 0 8px rgba(76,196,137,0); } 100% { box-shadow: 0 0 0 0 rgba(76,196,137,0); } }
+.session h3 { font-size: 1.5rem; }
+.drills { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.drill { display: grid; grid-template-columns: 76px 1fr auto; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 14px; font-size: .93rem; color: var(--stage-ink); }
+.drill .tag { font-family: var(--font-mono); font-size: .64rem; text-transform: uppercase; letter-spacing: .08em; color: var(--stage-muted); }
+.drill .min { font-family: var(--font-mono); font-size: .78rem; font-variant-numeric: tabular-nums; color: var(--stage-muted); }
+.drill.done { color: var(--stage-muted); }
+.drill.done .what { text-decoration: line-through; text-decoration-color: var(--stage-line); }
+.drill.now { background: rgba(76,196,137,.12); box-shadow: inset 0 0 0 1px rgba(76,196,137,.45); }
+.drill.now .tag { color: var(--stage-pitch); }
+.tutor-line { display: flex; gap: 12px; align-items: flex-end; font-size: .92rem; }
+.tutor-line svg { flex: none; width: 40px; height: 40px; border-radius: 12px; }
+.bubble { background: var(--stage-2); border: 1px solid var(--stage-line); border-radius: 16px 16px 16px 4px; padding: 11px 14px; color: var(--stage-ink); }
+.meter { display: grid; gap: 8px; }
+.meter-row { display: flex; justify-content: space-between; font-size: .8rem; color: var(--stage-muted); }
+.meter-row b { font-family: var(--font-mono); color: var(--stage-ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+.bar { height: 6px; border-radius: 99px; background: var(--stage-line); overflow: hidden; }
+.bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--stage-pitch), #9BE3BD); }
+.float-chip { position: absolute; right: -14px; top: -18px; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 16px; background: var(--stage-ink); color: var(--stage); font-size: .82rem; font-weight: 600; box-shadow: 0 18px 40px -18px rgba(0,0,0,.7); }
+.float-chip b { font-family: var(--font-display); font-stretch: 125%; font-size: 1.3rem; font-weight: 900; }
+
+/* credential strip */
+.creds { border-top: 1px solid var(--stage-line); padding-block: 26px; }
+.creds ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px 28px; font-family: var(--font-mono); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--stage-muted); }
+.creds li { display: flex; align-items: center; gap: 10px; }
+.creds li::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--stage-brass); }
+
+/* method */
+.plan { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; counter-reset: step; }
+.plan-step { position: relative; padding: 32px 28px 30px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); display: grid; gap: 14px; align-content: start; min-width: 0; overflow: hidden; }
+.plan-step .num { font-family: var(--font-display); font-stretch: 125%; font-weight: 900; font-size: 4.6rem; line-height: .8; color: transparent; -webkit-text-stroke: 1.5px var(--brass); opacity: .9; }
+.plan-step p { color: var(--muted); }
+.plan-step .when { font-family: var(--font-mono); font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: var(--pitch); }
+
+/* eligibility */
+.elig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center; }
+.elig-copy { display: grid; gap: 20px; min-width: 0; }
+.tracker { background: var(--stage-2); border: 1px solid var(--stage-line); border-radius: 26px; padding: 26px; display: grid; gap: 20px; box-shadow: var(--shadow); min-width: 0; }
+.tracker-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.tracker-head span { font-family: var(--font-mono); font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: var(--stage-muted); }
+.cores { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; }
+.core { aspect-ratio: 1; max-width: 100%; border-radius: 10px; display: grid; place-items: center; font-family: var(--font-mono); font-size: .62rem; letter-spacing: .04em; color: var(--stage-muted); box-shadow: inset 0 0 0 1px var(--stage-line); }
+.core.got { background: linear-gradient(160deg, var(--stage-pitch), #2F9A66); color: var(--stage); box-shadow: none; font-weight: 500; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.stat { background: var(--stage); border-radius: 14px; padding: 14px; }
+.stat b { display: block; font-family: var(--font-display); font-stretch: 125%; font-size: 1.6rem; font-weight: 900; line-height: 1.05; }
+.stat span { font-size: .78rem; color: var(--stage-muted); }
+.tracker-note { font-size: .78rem; color: var(--stage-muted); }
+
+/* features */
+.features { display: grid; grid-template-columns: 1.25fr 1fr; gap: 20px; }
+.feature { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 32px; display: grid; gap: 14px; align-content: start; min-width: 0; }
+.feature p { color: var(--muted); }
+.feature.tall { grid-row: span 2; }
+.chip { justify-self: start; font-family: var(--font-mono); font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; padding: 5px 10px; border-radius: 99px; background: var(--brass-soft); color: var(--brass); }
+.chip.ok { background: var(--pitch-soft); color: var(--pitch); }
+.cast { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-block: 8px; }
+.cast figure { margin: 0; display: grid; gap: 10px; min-width: 0; }
+.cast svg { width: 100%; height: auto; border-radius: 18px; display: block; }
+.cast figcaption { font-size: .85rem; line-height: 1.3; }
+.cast figcaption span { display: block; font-family: var(--font-mono); font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.staff { font-family: var(--font-mono); font-size: .8rem; background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 16px; overflow-x: auto; white-space: pre; line-height: 1.6; }
+
+/* tutoring gap */
+.gap-wrap { background: var(--surface); border-block: 1px solid var(--line); }
+.gap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center; }
+.gap-copy { display: grid; gap: 20px; min-width: 0; }
+.cost { margin: 0; display: grid; gap: 26px; min-width: 0; }
+.cost-title { font-family: var(--font-mono); font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.cost-row { display: grid; gap: 8px; }
+.cost-label { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-weight: 600; }
+.cost-label b { font-family: var(--font-display); font-stretch: 125%; font-size: 1.9rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+.cost-bar { height: 12px; border-radius: 99px; background: var(--bg); overflow: hidden; }
+.cost-bar span { display: block; height: 100%; min-width: 8px; border-radius: inherit; }
+.c-hi { background: var(--muted); opacity: .55; }
+.c-mid { background: var(--muted); opacity: .35; }
+.c-us { background: linear-gradient(90deg, var(--pitch), var(--brass)); }
+.cost-row small { color: var(--muted); font-size: .8rem; }
+.cost-row.us .cost-label { color: var(--pitch); }
+.cost-foot { font-size: .78rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; }
+
+/* story */
+.story-grid { display: grid; grid-template-columns: .95fr 1.05fr; gap: 80px; align-items: start; }
+.story-intro { display: grid; gap: 24px; position: sticky; top: 110px; min-width: 0; }
+.mission { font-family: var(--font-display); font-stretch: 110%; font-size: clamp(1.4rem, 2.6vw, 1.85rem); font-weight: 700; line-height: 1.2; padding: 26px 28px; border-radius: var(--radius); background: var(--brass-soft); color: var(--ink); position: relative; }
+.mission::before { content: "\201C"; position: absolute; top: -18px; left: 20px; font-size: 4.5rem; line-height: 1; color: var(--brass); font-family: Georgia, serif; }
+.timeline { list-style: none; margin: 0; padding: 0 0 0 28px; position: relative; display: grid; gap: 30px; }
+.timeline::before { content: ""; position: absolute; left: 6px; top: 8px; bottom: 8px; width: 2px; background: linear-gradient(var(--brass), var(--pitch)); border-radius: 2px; opacity: .55; }
+.timeline li { position: relative; display: grid; gap: 6px; min-width: 0; }
+.timeline li::before { content: ""; position: absolute; left: -27px; top: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--bg); box-shadow: inset 0 0 0 3px var(--brass); }
+.timeline li.now::before { background: var(--brass); box-shadow: 0 0 0 5px var(--brass-soft); }
+.timeline .when { font-family: var(--font-mono); font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+.timeline h4 { font-size: 1.05rem; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.timeline p { color: var(--muted); font-size: .95rem; }
+.lane { font-family: var(--font-mono); font-size: .6rem; font-weight: 500; text-transform: uppercase; letter-spacing: .1em; padding: 3px 8px; border-radius: 99px; }
+.lane.field { background: var(--pitch-soft); color: var(--pitch); }
+.lane.music { background: var(--brass-soft); color: var(--brass); }
+.lane.class { background: var(--line); color: var(--ink); }
+
+/* pricing */
+.tiers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: stretch; }
+.tier { border: 1px solid var(--line); border-radius: var(--radius); padding: 30px; display: grid; gap: 18px; align-content: start; background: var(--surface); min-width: 0; }
+.tier.featured { background: var(--stage); color: var(--stage-ink); border-color: var(--stage); box-shadow: 0 30px 70px -30px rgba(10,22,17,.6); }
+.tier.featured ul { color: var(--stage-muted); }
+.tier.featured .chip { background: rgba(76,196,137,.15); color: var(--stage-pitch); }
+.tier-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 26px; }
+.price { font-family: var(--font-display); font-stretch: 125%; font-size: 3rem; font-weight: 900; line-height: 1; }
+.price small { font-family: var(--font-body); font-stretch: 100%; font-size: .9rem; font-weight: 500; opacity: .7; }
+.tier ul { margin: 0; padding: 18px 0 0; list-style: none; color: var(--muted); display: grid; gap: 10px; font-size: .95rem; border-top: 1px solid var(--line); }
+.tier.featured ul { border-color: var(--stage-line); }
+.tier li { display: flex; gap: 10px; }
+.tier li::before { content: "✓"; color: var(--pitch); font-weight: 700; }
+.tier.featured li::before { color: var(--stage-pitch); }
+.note { font-size: .8rem; color: var(--muted); margin-top: 20px; }
+
+/* signup */
+.signup { margin-top: 72px; border-radius: 30px; padding: 48px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; position: relative; overflow: hidden; isolation: isolate; }
+.signup::before { content: ""; position: absolute; right: -120px; top: -160px; width: 420px; height: 420px; background: radial-gradient(closest-side, rgba(230,181,86,.22), transparent 70%); z-index: -1; }
+.signup h2 { font-size: clamp(2rem, 4vw, 2.8rem); }
+form { display: grid; gap: 12px; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+label { font-size: .78rem; font-weight: 600; display: grid; gap: 6px; color: var(--stage-muted); }
+input, select { font: 500 1rem var(--font-body); padding: 13px 15px; border-radius: 14px; border: 1px solid var(--stage-line); background: var(--stage-2); color: var(--stage-ink); width: 100%; min-width: 0; transition: border-color .2s; color-scheme: dark; }
+input:focus, select:focus { outline: none; border-color: var(--stage-brass); }
+.thanks { font-weight: 600; color: var(--stage-brass); }
+
+footer { padding-block: 40px; color: var(--muted); font-size: .85rem; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 28px; }
+
+@media (max-width: 900px) {
+  .hero-grid, .elig-grid, .story-grid, .features, .signup, .gap-grid { grid-template-columns: 1fr; gap: 48px; }
+  .feature.tall { grid-row: auto; }
+  .story-intro { position: static; }
+  .plan, .tiers { grid-template-columns: 1fr; }
+  .nav-links a:not(.btn) { display: none; }
+  section { padding-block: 80px; }
+  .hero { padding-block: 120px 80px; }
+  .float-chip { right: 8px; }
+}
+@media (max-width: 480px) {
+  .fields { grid-template-columns: 1fr; }
+  .signup { padding: 28px 22px; }
+  .cores { grid-template-columns: repeat(4, 1fr); }
+  .drill { grid-template-columns: 1fr auto; }
+  .drill .tag { grid-column: 1 / -1; }
+  .stats { grid-template-columns: 1fr 1fr; }
+  .stats .stat:last-child { grid-column: 1 / -1; }
+  .creds ul { justify-content: flex-start; }
+  .nav-inner { padding-left: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  html { scroll-behavior: auto; }
+}
+</style>
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <div class="nav-inner">
+      <a class="logo" href="#top">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="#4CC489" stroke-width="2.5"/><path d="M7 15.5 L12 7 L17 15.5" fill="none" stroke="#E6B556" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        The Assist
+      </a>
+      <nav class="nav-links" aria-label="Main">
+        <a href="#method">How it works</a>
+        <a href="#gap">Why it costs less</a>
+        <a href="#story">My story</a>
+        <a href="#pilot">Pricing</a>
+        <a class="btn" href="#join">Join the pilot</a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <section class="stage hero">
+    <svg class="pitch-lines" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <g fill="none" stroke="currentColor" stroke-width="2">
+        <rect pathLength="1" x="40" y="40" width="1120" height="620"/>
+        <line pathLength="1" x1="600" y1="40" x2="600" y2="660"/>
+        <circle pathLength="1" cx="600" cy="350" r="110"/>
+        <rect pathLength="1" x="40" y="190" width="170" height="320"/>
+        <rect pathLength="1" x="990" y="190" width="170" height="320"/>
+        <path pathLength="1" d="M210 290 A90 90 0 0 1 210 410"/>
+        <path pathLength="1" d="M990 290 A90 90 0 0 0 990 410"/>
+      </g>
+    </svg>
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <span class="eyebrow">AI study coach for high school athletes</span>
+        <h1>Study like you <span class="accent">train.</span></h1>
+        <p class="lede">Short, coached study sessions built around your practice schedule. The Assist keeps your core-course GPA on track for NCAA eligibility and gets you ready for the tests that still decide admissions and merit money.</p>
+        <div class="hero-cta">
+          <a class="btn" href="#join">Join the pilot <span class="arrow" aria-hidden="true">→</span></a>
+          <a class="btn ghost" href="#story">Why I'm building this</a>
+        </div>
+      </div>
+
+      <div class="card-stack">
+        <div class="float-chip" aria-label="Example: 12-day study streak"><b>12</b> day streak</div>
+        <aside class="session" aria-label="Example study session">
+          <div class="session-top"><span class="live">In session</span><span>Tue · before practice</span></div>
+          <h3>Today's set · 24 min</h3>
+          <ul class="drills">
+            <li class="drill done"><span class="tag">Warm-up</span><span class="what">3 quick ratio problems</span><span class="min">4:00</span></li>
+            <li class="drill now"><span class="tag">Main set</span><span class="what">ACT Math: slope &amp; linear functions</span><span class="min">12:00</span></li>
+            <li class="drill"><span class="tag">Film</span><span class="what">Review 2 misses from Sunday</span><span class="min">5:00</span></li>
+            <li class="drill"><span class="tag">Cool-down</span><span class="what">Science passage, 1 graph</span><span class="min">3:00</span></li>
+          </ul>
+          <div class="tutor-line">
+            <svg viewBox="0 0 120 120" aria-hidden="true"><rect width="120" height="120" fill="#1D3A2B"/><path d="M14 120 C18 92 40 84 60 84 C80 84 102 92 106 120Z" fill="#4CC489"/><rect x="50" y="66" width="20" height="22" fill="#5C3A22"/><circle cx="60" cy="54" r="24" fill="#6B4428"/><path d="M36 50 C36 30 84 30 84 50 L84 42 C84 26 36 26 36 42Z" fill="#1A120C"/><rect x="35" y="40" width="50" height="7" rx="3.5" fill="#E6B556"/></svg>
+            <p class="bubble">Slope is just pace. You ran 3 yards every second. What's the rise over run?</p>
+          </div>
+          <div class="meter">
+            <div class="meter-row"><span>Core-course GPA</span><b>3.12 · D1 min 2.30</b></div>
+            <div class="bar"><span style="width:78%"></span></div>
+          </div>
+        </aside>
+      </div>
+    </div>
+    <div class="wrap">
+      <div class="creds">
+        <ul>
+          <li>ODP invitee</li>
+          <li>TN All-State Jazz · 1st chair ×2</li>
+          <li>WashU · Computer Engineering</li>
+          <li>Rice · MS in AI</li>
+          <li>Argonne · SC25</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="method">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">How it works</span>
+        <h2>Every session is a practice plan.</h2>
+        <p class="lede">Athletes already know how to get better: show up, run the drill, watch the film. The Assist uses the same routine for school.</p>
+      </div>
+      <div class="plan">
+        <article class="plan-step">
+          <span class="num">01</span>
+          <span class="when">2–5 min</span>
+          <h3>Warm-up</h3>
+          <p>A few fast questions find where you are today. The tutor adjusts the rest of the session from your answers.</p>
+        </article>
+        <article class="plan-step">
+          <span class="num">02</span>
+          <span class="when">10–15 min</span>
+          <h3>Main set</h3>
+          <p>One skill, worked step by step with a tutor that explains things in your language. Sports examples, not textbook filler.</p>
+        </article>
+        <article class="plan-step">
+          <span class="num">03</span>
+          <span class="when">5 min</span>
+          <h3>Film review</h3>
+          <p>Past mistakes come back until you get them right. Coaches and parents get a weekly summary, not a wall of data.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage">
+    <div class="wrap elig-grid">
+      <div class="elig-copy">
+        <span class="eyebrow">Eligibility tracker</span>
+        <h2>16 core courses. No surprises senior year.</h2>
+        <p class="lede">NCAA Division I eligibility runs on 16 core courses and a minimum core GPA, with 10 of them locked in before your seventh semester. The Assist tracks every one, so a missed class never costs you an offer.</p>
+      </div>
+      <div class="tracker" role="img" aria-label="Example athlete: 11 of 16 core courses complete, core GPA 3.12, on pace for the 10/7 rule">
+        <div class="tracker-head"><h3>Core courses</h3><span>Example · junior year</span></div>
+        <div class="cores" aria-hidden="true">
+          <span class="core got">ENG</span><span class="core got">ENG</span><span class="core got">ENG</span><span class="core">ENG</span>
+          <span class="core got">MATH</span><span class="core got">MATH</span><span class="core">MATH</span><span class="core got">SCI</span>
+          <span class="core got">SCI</span><span class="core">SCI</span><span class="core got">SOC</span><span class="core got">SOC</span>
+          <span class="core got">ADD</span><span class="core">ADD</span><span class="core">ADD</span><span class="core">ADD</span>
+        </div>
+        <div class="stats" aria-hidden="true">
+          <div class="stat"><b>11/16</b><span>Courses done</span></div>
+          <div class="stat"><b>3.12</b><span>Core GPA</span></div>
+          <div class="stat"><b>On pace</b><span>10/7 rule</span></div>
+        </div>
+        <p class="tracker-note">Rules summarized. The NCAA Eligibility Center has the official requirements.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">What makes it different</span>
+        <h2>Tutors who look like you. Lessons with rhythm.</h2>
+      </div>
+      <div class="features">
+        <article class="feature tall">
+          <span class="chip ok">First release</span>
+          <h3>Animated tutors with a real cast</h3>
+          <p>Kids work harder for mentors they recognize. The Assist's tutors are consistent animated characters, designed with Black and diaspora students at the center, built on the same character pipeline I use in professional animation.</p>
+          <div class="cast">
+            <figure>
+              <svg viewBox="0 0 120 140" role="img" aria-label="Coach Dre illustration"><defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1F4A35"/><stop offset="1" stop-color="#0E2419"/></linearGradient></defs><rect width="120" height="140" fill="url(#g1)"/><path d="M10 140 C14 104 38 96 60 96 C82 96 106 104 110 140Z" fill="#4CC489"/><path d="M48 96 L60 112 L72 96Z" fill="#2F9A66"/><rect x="50" y="76" width="20" height="24" fill="#5C3A22"/><ellipse cx="60" cy="60" rx="25" ry="28" fill="#6B4428"/><path d="M35 56 C34 34 86 34 85 56 L85 46 C84 28 36 28 35 46Z" fill="#1A120C"/><rect x="34" y="44" width="52" height="8" rx="4" fill="#E6B556"/><circle cx="51" cy="62" r="2.6" fill="#1A120C"/><circle cx="69" cy="62" r="2.6" fill="#1A120C"/><path d="M52 74 Q60 79 68 74" stroke="#1A120C" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
+              <figcaption>Coach Dre<span>Math</span></figcaption>
+            </figure>
+            <figure>
+              <svg viewBox="0 0 120 140" role="img" aria-label="Ms. Nia illustration"><defs><linearGradient id="g2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4A3612"/><stop offset="1" stop-color="#241A08"/></linearGradient></defs><rect width="120" height="140" fill="url(#g2)"/><circle cx="60" cy="50" r="40" fill="#1A120C"/><path d="M10 140 C14 104 38 96 60 96 C82 96 106 104 110 140Z" fill="#E6B556"/><rect x="50" y="76" width="20" height="24" fill="#7A4E30"/><ellipse cx="60" cy="60" rx="24" ry="27" fill="#8A5A3A"/><circle cx="51" cy="62" r="2.6" fill="#1A120C"/><circle cx="69" cy="62" r="2.6" fill="#1A120C"/><path d="M52 73 Q60 79 68 73" stroke="#1A120C" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="35" cy="70" r="3" fill="#E6B556"/><circle cx="85" cy="70" r="3" fill="#E6B556"/></svg>
+              <figcaption>Ms. Nia<span>Reading</span></figcaption>
+            </figure>
+            <figure>
+              <svg viewBox="0 0 120 140" role="img" aria-label="Marcus illustration"><defs><linearGradient id="g3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1B2E3A"/><stop offset="1" stop-color="#0C1820"/></linearGradient></defs><rect width="120" height="140" fill="url(#g3)"/><path d="M10 140 C14 104 38 96 60 96 C82 96 106 104 110 140Z" fill="#EEF2EA"/><rect x="50" y="76" width="20" height="24" fill="#3A2416"/><ellipse cx="60" cy="60" rx="25" ry="28" fill="#4A2E1C"/><path d="M36 52 C36 36 84 36 84 52 C80 42 40 42 36 52Z" fill="#120C08"/><rect x="42" y="56" width="15" height="11" rx="4" fill="none" stroke="#E6B556" stroke-width="2"/><rect x="63" y="56" width="15" height="11" rx="4" fill="none" stroke="#E6B556" stroke-width="2"/><path d="M57 61 H63" stroke="#E6B556" stroke-width="2"/><circle cx="49.5" cy="61.5" r="2.2" fill="#120C08"/><circle cx="70.5" cy="61.5" r="2.2" fill="#120C08"/><path d="M52 75 Q60 80 68 75" stroke="#120C08" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
+              <figcaption>Marcus<span>Science</span></figcaption>
+            </figure>
+          </div>
+          <p>Every answer is checked by a second AI before a student sees it. A tutor that teaches the wrong thing is worse than no tutor, so accuracy checks ship on day one.</p>
+        </article>
+        <article class="feature">
+          <span class="chip">Coming next</span>
+          <h3>Rhythm drills</h3>
+          <p>Fractions as time signatures. Ratios as tempo. Students build a groove, and the tutor connects it back to the math.</p>
+          <div class="staff" aria-label="Example: a 3/4 bar split into beats">3/4 │ ♩  ♩  ♩ │  = 1 bar
+    │ ♪♪ ♩  ♩ │  ½ + ½ + 1 + 1 = 3</div>
+        </article>
+        <article class="feature">
+          <span class="chip">For programs</span>
+          <h3>Built for small towns too</h3>
+          <p>Volunteer tutors get diagnostics and lesson plans. Coordinators get outcome reports they can put in grant applications.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="gap" class="gap-wrap">
+    <div class="wrap gap-grid">
+      <div class="gap-copy">
+        <span class="eyebrow">The tutoring gap</span>
+        <h2>Some families buy a tutor. Most can't.</h2>
+        <p class="lede">Families with money have always bought their kids an edge: a private tutor two nights a week, a full test-prep package, someone checking every grade. The students I tutored in Mason never had that. Neither do most athletes who spend their evenings at practice.</p>
+        <p class="lede">The Assist gives every student coached, one-on-one sessions for a small fraction of the cost. A great human tutor is still worth it if you can afford one. The Assist is for everyone who can't.</p>
+      </div>
+      <figure class="cost">
+        <figcaption class="cost-title">Monthly cost · 2 sessions a week</figcaption>
+        <div class="cost-row">
+          <div class="cost-label"><span>Elite test-prep tutor</span><b>$1,600+</b></div>
+          <div class="cost-bar"><span class="c-hi" style="width:100%"></span></div>
+          <small>~$200/hr and up · 8 hrs</small>
+        </div>
+        <div class="cost-row">
+          <div class="cost-label"><span>Average private tutor</span><b>~$500</b></div>
+          <div class="cost-bar"><span class="c-mid" style="width:31%"></span></div>
+          <small>~$62/hr national average · 8 hrs</small>
+        </div>
+        <div class="cost-row us">
+          <div class="cost-label"><span>The Assist</span><b>$19</b></div>
+          <div class="cost-bar"><span class="c-us" style="width:1.2%"></span></div>
+          <small>Unlimited sessions · about 4% of an average tutor</small>
+        </div>
+        <p class="cost-foot">A full 20–30 hour SAT/ACT prep package commonly runs $1,500–$6,000. Three months of The Assist is $57. Tutor rates vary widely by market and come from published industry pricing guides.</p>
+      </figure>
+    </div>
+  </section>
+
+  <section id="story">
+    <div class="wrap story-grid">
+      <div class="story-intro">
+        <span class="eyebrow">Founder</span>
+        <h2>Joshua-James Claybon</h2>
+        <p class="mission">Combine technology, music, and the arts to push students from overlooked places toward academic success.</p>
+        <p class="lede">I wrote that mission in my college applications. It got me into WashU and Rice and earned me the Ervin Scholarship and the GEM Fellowship. The Assist is how I keep that promise with the tools I've learned since.</p>
+        <div><a class="btn quiet" href="https://www.linkedin.com/in/jclaybon/" target="_blank" rel="noopener">Connect on LinkedIn <span class="arrow" aria-hidden="true">↗</span></a></div>
+      </div>
+      <ol class="timeline">
+        <li><span class="when">Age 9</span><h4><span class="lane field">Field</span>Competitive soccer</h4><p>State league level and an invite to the Olympic Development Program. I know what a day of school plus practice costs a kid.</p></li>
+        <li><span class="when">8th grade</span><h4><span class="lane music">Music</span>Jazz band, first chair</h4><p>First chair in the Tennessee All-State Jazz Band two years in a row. Music taught me that skill comes from daily practice.</p></li>
+        <li><span class="when">High school</span><h4><span class="lane class">Class</span>Tutoring in Mason, TN</h4><p>Staff at a nonprofit in a town of under 1,000 people, tutoring low-income students in ACT math, reading, English and science, plus chess, kickball and volleyball days.</p></li>
+        <li><span class="when">High school</span><h4><span class="lane field">Field</span><span class="lane class">Class</span>Founded ACT prep for athletes</h4><p>A program for athletes who needed higher scores to accept scholarships at top programs. The Assist starts from that idea.</p></li>
+        <li><span class="when">2024</span><h4>B.S. Computer Engineering, WashU</h4><p>DevOps internship at Argonne National Laboratory the same summer.</p></li>
+        <li><span class="when">2025</span><h4>AI research at Argonne</h4><p>Built a multi-agent AI system for scientific research, accepted to SC25. The Assist's tutor uses the same pattern: one agent teaches, another checks its work.</p></li>
+        <li><span class="when">2025</span><h4>M.S. Computer Science (AI), Rice</h4><p>Reinforcement learning, deep learning for computer vision, and AI systems.</p></li>
+        <li class="now"><span class="when">Now</span><h4><span class="lane music">Arts</span>Founding Engineer, Underscore Animation</h4><p>AI tools and character pipelines for an animation studio focused on the global Black and diaspora audience.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="pilot" style="padding-top: 0;">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Pricing</span>
+        <h2>Pick your roster.</h2>
+        <p class="lede">Pilot spots are free for the first season. These are the planned prices after that.</p>
+      </div>
+      <div class="tiers">
+        <article class="tier">
+          <div class="tier-head"><h3>Athlete</h3></div>
+          <div class="price">$19<small> / month</small></div>
+          <ul><li>Daily coached sessions</li><li>Eligibility tracker</li><li>Weekly parent summary</li></ul>
+        </article>
+        <article class="tier featured">
+          <div class="tier-head"><h3>Team</h3><span class="chip">Best for clubs</span></div>
+          <div class="price">$8<small> / athlete / month</small></div>
+          <ul><li>Everything in Athlete</li><li>Coach dashboard for the whole roster</li><li>Academic risk alerts before grades post</li></ul>
+        </article>
+        <article class="tier">
+          <div class="tier-head"><h3>Community</h3></div>
+          <div class="price">Free<small> pilot</small></div>
+          <ul><li>For nonprofits and Title I programs</li><li>Volunteer tutor tools</li><li>Outcome reports for grants</li></ul>
+        </article>
+      </div>
+      <p class="note">Prices are planned and may change before launch. Students under 13 join only with parent consent.</p>
+
+      <div class="signup stage" id="join">
+        <div style="display:grid; gap:16px; min-width:0;">
+          <span class="eyebrow">First season</span>
+          <h2>Join the pilot.</h2>
+          <p class="lede">I'm looking for one club team and one community program to pilot with. Tell me who you are and I'll reach out.</p>
+        </div>
+        <form id="pilot-form" novalidate>
+          <div class="fields">
+            <label for="f-name">Your name<input id="f-name" name="name" autocomplete="name" required></label>
+            <label for="f-role">I'm a…
+              <select id="f-role" name="role">
+                <option>Coach or club director</option>
+                <option>Parent</option>
+                <option>Student-athlete</option>
+                <option>Program or school leader</option>
+              </select>
+            </label>
+          </div>
+          <label for="f-email">Email<input id="f-email" name="email" type="email" autocomplete="email" required></label>
+          <label for="f-org">Team, club or program<input id="f-org" name="org"></label>
+          <button class="btn" type="submit">Request a pilot spot <span class="arrow" aria-hidden="true">→</span></button>
+          <p class="thanks" id="thanks" hidden></p>
+        </form>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>The Assist · built by Joshua-James Claybon · Houston, TX</span>
+    <span>NCAA rules are summarized. See eligibility.ncaa.org for official requirements.</span>
+  </div>
+</footer>
+
+<script>
+document.getElementById('pilot-form').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var name = document.getElementById('f-name').value.trim();
+  var email = document.getElementById('f-email');
+  var thanks = document.getElementById('thanks');
+  if (!name || !email.value || !email.checkValidity()) {
+    thanks.textContent = 'Add your name and a valid email so I can reach you.';
+    thanks.hidden = false;
+    return;
+  }
+  thanks.textContent = 'Thanks, ' + name.split(' ')[0] + '. Signups open soon. For now, connect with me on LinkedIn.';
+  thanks.hidden = false;
+});
+</script>
+</body>
+</html>
